@@ -1,12 +1,5 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { authMiddleware } from '../../lib/auth';
-import { successResponse, errorResponse } from '../../lib/response';
-
-/**
- * JSON Schema Validator
- * Validate JSON data against a JSON Schema. Returns detailed error paths.
- * Supports: type checking, required fields, enum, min/max, pattern, nested objects, arrays.
- */
+// ClawHub Local Skill - runs entirely in your agent, no API key required
+// JSON Schema Validator - Validate JSON data against a JSON Schema
 
 interface ValidationError {
   path: string;
@@ -69,25 +62,18 @@ function validateValue(value: any, schema: any, path: string, errors: Validation
   }
 }
 
-async function handler(req: VercelRequest, res: VercelResponse) {
-  const { data, schema } = req.body || {};
-  if (data === undefined) return errorResponse(res, 'Missing required field: data', 400);
-  if (!schema || typeof schema !== 'object') return errorResponse(res, 'Missing required field: schema (must be a JSON Schema object)', 400);
+export async function run(input: { data: any; schema: any }) {
+  if (input.data === undefined) throw new Error('Missing required field: data');
+  if (!input.schema || typeof input.schema !== 'object') throw new Error('Missing required field: schema (must be a JSON Schema object)');
 
-  try {
-    const startTime = Date.now();
-    const errors: ValidationError[] = [];
-    validateValue(data, schema, '$', errors);
+  const startTime = Date.now();
+  const errors: ValidationError[] = [];
+  validateValue(input.data, input.schema, '$', errors);
 
-    return successResponse(res, {
-      valid: errors.length === 0,
-      errors,
-      error_count: errors.length,
-      _meta: { skill: 'json-schema-validator', latency_ms: Date.now() - startTime },
-    });
-  } catch (error: any) {
-    return errorResponse(res, 'Validation failed', 500, error.message);
-  }
+  return {
+    valid: errors.length === 0, errors, error_count: errors.length,
+    _meta: { skill: 'json-schema-validator', latency_ms: Date.now() - startTime },
+  };
 }
 
-export default authMiddleware(handler);
+export default run;
